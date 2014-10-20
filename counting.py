@@ -578,7 +578,7 @@ class BlackJackDeck(Deck):
         cards = combined decks to play black jack
     """
     def __init__(self):
-        num_decks = 5
+        num_decks = 6
         super(BlackJackDeck, self).__init__()
         for i in range(num_decks - 1):
             new_deck = Deck()
@@ -618,7 +618,7 @@ class BlackJackGame(object):
             #Create new BlackJack Deck if current deck is empty
             self.deck = BlackJackDeck()
             #Burn a card before we start the round
-            while self.deck.size() > 13:
+            while self.deck.size() > 16:
                 self.initBet(self.player, len(self.deck.cards))
                 self.initHands(self.player, self.dealer, self.deck, self)
                 print "===============================%d===========================" % self.dealing
@@ -654,12 +654,17 @@ class BlackJackGame(object):
                                  self)
                 print self.player
 
+                # Stop playing if all hands of player has busted
                 handstillinplay = False
                 for hands in self.player.hands:
                     if hands.getTotalValue() <= 21:
                         handstillinplay = True
                 if handstillinplay == False:
                     determineWinners(self.player, self.dealer)
+                    print self.dealer
+                    print "Player money %d" % self.player.money.amount
+                    self.endRound()
+                    continue
 
                 # Dealer goes last
                 # Dealer reveal, or when dealer starts hitting
@@ -676,6 +681,7 @@ class BlackJackGame(object):
 
                 print "Player money %d" % self.player.money.amount
                 #============Stop and delete everything==============================
+                print "Cards remaining in deck %d" % len(self.deck.cards)
                 self.endRound()
             #Increase the game round
             gamenumber += 1
@@ -688,6 +694,7 @@ class BlackJackGame(object):
         print "Player losses %d" % self.player.lose
         print "Total Games %d" % self.dealing
         print "Player win rate %3.3f percent" % ((self.player.win / self.dealing) * 100)
+        print "Player final money %d" % self.player.money.amount
 
     def endRound(self):
         self.player.money.determinehighestamount()
