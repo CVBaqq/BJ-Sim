@@ -618,7 +618,7 @@ class BlackJackGame(object):
             #Create new BlackJack Deck if current deck is empty
             self.deck = BlackJackDeck()
             #Burn a card before we start the round
-            while self.deck.size() > 16:
+            while self.deck.size() > 78:
                 self.initBet(self.player, len(self.deck.cards))
                 self.initHands(self.player, self.dealer, self.deck, self)
                 print "===============================%d===========================" % self.dealing
