@@ -225,7 +225,7 @@ class Hand(Deck):
         self.justSplited = False
         del self.cards[:]
         self.isAceSplit = False
-        self.discarded = True
+        self.discarded = False
 
     def printUpCards(self):
         if self.label == "Dealer":
@@ -274,9 +274,10 @@ class Hand(Deck):
 
 
     def __str__(self):
+        discarded = "Discarded: %r " % self.discarded
         cardstr = ', '.join(x.__str__() for x in self.cards)
         str = "Cards: %s " % (cardstr)
-        return str
+        return discarded + str
 
 class Money(object):
 
@@ -422,55 +423,109 @@ class Person(object):
                 # add a card to the hand so we can play on.
                 # Check whether we doubled on this hand. One corner case is when we split aces,
                 # we only get one card.
-                if self.hands[self.currentPlayingHand].justSplited:
-                    deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
-                    if self.hands[self.currentPlayingHand].isAceSplit:
+                if self.hands[self.currentPlayingHand].discarded == False:
+                    if self.hands[self.currentPlayingHand].justSplited:
+                        deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                        if self.hands[self.currentPlayingHand].isAceSplit:
+                            if self.currentPlayingHand < len(self.hands) - 1:
+                                self.currentPlayingHand += 1
+                            else:
+                                finishedallhands = True
+                            continue
+                        self.hands[self.currentPlayingHand].justSplited = False
+
+                    if self.hands[self.currentPlayingHand].doubled:
                         if self.currentPlayingHand < len(self.hands) - 1:
                             self.currentPlayingHand += 1
                         else:
                             finishedallhands = True
                         continue
-                    self.hands[self.currentPlayingHand].justSplited = False
 
-                if self.hands[self.currentPlayingHand].doubled:
-                    if self.currentPlayingHand < len(self.hands) - 1:
-                        self.currentPlayingHand += 1
-                    else:
-                        finishedallhands = True
-                    continue
+                    splitLabelLookup = self.hands[self.currentPlayingHand].getLabelForSplit()
+                    #Assume default action is not to split
+                    if splitLabelLookup != '':
+                        try:
+                            splitAction = splitstrat[splitLabelLookup][dealercard]
+                        except KeyError, e:
+                            print "Shouldn't hit here"
+                            splitAction = 'N'
+                        except IndexError, e:
+                            print "Shouldn't hit here"
+                            splitAction = 'N'
+                        if splitAction == 'Y':
+                            didsplit = self.split()
+                            if didsplit:
+                                self.bets.append(Bet(self.bets[self.currentPlayingHand].get_amount()))
+                                self.money.split(self.bets[-1])
+                            # We want to redo the loop so it can reevaluate itself
+                            continue
+                        #print 'Split Action: ' + splitAction
+                    # Assume default action is to hit
+                    softLabelLookup = str(self.hands[self.currentPlayingHand].getTotalValue())
+                    if self.hands[self.currentPlayingHand].isSoftTotal():
+                        try:
+                            softAction = softstrat[softLabelLookup][dealercard]
+                            # We don't have mapping for 12 and under, so move a long to hard hitting
+                        except KeyError, e:
+                            print "Shouldn't hit here"
+                            softAction = 'H'
+                        except IndexError, e:
+                            print "Shouldn't hit here"
+                            softAction = 'H'
+                        #print 'Soft Action: ' + softAction
+                        if softAction == 'H':
+                            deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                            continue
+                        elif softAction == 'D':
+                            if len(self.hands[self.currentPlayingHand].cards) >= 2 and self.hands[self.currentPlayingHand].doubled:
+                                if self.currentPlayingHand < len(self.hands) - 1:
+                                    self.currentPlayingHand += 1
+                                else:
+                                    finishedallhands = True
+                                continue
+                            if len(self.hands[self.currentPlayingHand].cards) == 2:
+                                deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                                self.hands[self.currentPlayingHand].doubled = True
+                                self.bets[self.currentPlayingHand].double_down()
+                                self.money.double_down(self.bets[self.currentPlayingHand])
+                                if self.currentPlayingHand < len(self.hands) - 1:
+                                    self.currentPlayingHand += 1
+                                else:
+                                    finishedallhands = True
+                                continue
+                            # give a card if we can't double
+                            if len(self.hands[self.currentPlayingHand].cards) > 2 and self.hands[self.currentPlayingHand].doubled == False:
+                                deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                                continue
+                        # We want to see what our action is for a hard hand here.
+                        # so continue the rundown
+                        #elif softAction == 'S':
 
-                splitLabelLookup = self.hands[self.currentPlayingHand].getLabelForSplit()
-                #Assume default action is not to split
-                if splitLabelLookup != '':
+
+                    # Assume default action is to stand
+                    hardLabelLookup = str(softLabelLookup)
+                    #print "Hard Label Lookup: " + hardLabelLookup
+                    #print "Dealer faceup card: " + dealercard
                     try:
-                        splitAction = splitstrat[splitLabelLookup][dealercard]
+                        hardAction = hardstrat[hardLabelLookup][dealercard]
+                        # use default hit if index can't be looked up
+                        # may cause problems here
                     except KeyError, e:
-                        splitAction = 'N'
+                        print "Shouldn't hit here"
+                        hardAction = 'S'
                     except IndexError, e:
-                        splitAction = 'N'
-                    if splitAction == 'Y':
-                        didsplit = self.split()
-                        if didsplit:
-                            self.bets.append(Bet(self.bets[self.currentPlayingHand].get_amount()))
-                            self.money.split(self.bets[-1])
-                        # We want to redo the loop so it can reevaluate itself
-                        continue
-                    #print 'Split Action: ' + splitAction
-                # Assume default action is to hit
-                softLabelLookup = str(self.hands[self.currentPlayingHand].getTotalValue())
-                if self.hands[self.currentPlayingHand].isSoftTotal():
-                    try:
-                        softAction = softstrat[softLabelLookup][dealercard]
-                        # We don't have mapping for 12 and under, so move a long to hard hitting
-                    except KeyError, e:
-                        softAction = 'H'
-                    except IndexError, e:
-                        softAction = 'H'
-                    #print 'Soft Action: ' + softAction
-                    if softAction == 'H':
+                        print "Shouldn't hit here"
+                        hardAction = 'S'
+
+                    #print 'Hard Action: ' + hardAction
+                    #print softLabelLookup
+                    if hardAction == 'H':
                         deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
                         continue
-                    elif softAction == 'D':
+                    elif hardAction == 'F':
+                        deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                        continue
+                    elif hardAction == 'D':
                         if len(self.hands[self.currentPlayingHand].cards) >= 2 and self.hands[self.currentPlayingHand].doubled:
                             if self.currentPlayingHand < len(self.hands) - 1:
                                 self.currentPlayingHand += 1
@@ -491,61 +546,20 @@ class Person(object):
                         if len(self.hands[self.currentPlayingHand].cards) > 2 and self.hands[self.currentPlayingHand].doubled == False:
                             deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
                             continue
-                    # We want to see what our action is for a hard hand here.
-                    # so continue the rundown
-                    #elif softAction == 'S':
-
-
-                # Assume default action is to stand
-                hardLabelLookup = str(softLabelLookup)
-                #print "Hard Label Lookup: " + hardLabelLookup
-                #print "Dealer faceup card: " + dealercard
-                try:
-                    hardAction = hardstrat[hardLabelLookup][dealercard]
-                    # use default hit if index can't be looked up
-                    # may cause problems here
-                except KeyError, e:
-                    hardAction = 'S'
-                except IndexError, e:
-                    hardAction = 'S'
-
-                #print 'Hard Action: ' + hardAction
-                #print softLabelLookup
-                if hardAction == 'H':
-                    deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
-                    continue
-                elif hardAction == 'F':
-                    deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
-                    continue
-                elif hardAction == 'D':
-                    if len(self.hands[self.currentPlayingHand].cards) >= 2 and self.hands[self.currentPlayingHand].doubled:
+                    elif hardAction == 'S':
                         if self.currentPlayingHand < len(self.hands) - 1:
                             self.currentPlayingHand += 1
                         else:
                             finishedallhands = True
                         continue
-                    if len(self.hands[self.currentPlayingHand].cards) == 2:
-                        deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
-                        self.hands[self.currentPlayingHand].doubled = True
-                        self.bets[self.currentPlayingHand].double_down()
-                        self.money.double_down(self.bets[self.currentPlayingHand])
-                        if self.currentPlayingHand < len(self.hands) - 1:
-                            self.currentPlayingHand += 1
-                        else:
-                            finishedallhands = True
-                        continue
-                    # give a card if we can't double
-                    if len(self.hands[self.currentPlayingHand].cards) > 2 and self.hands[self.currentPlayingHand].doubled == False:
-                        deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
-                        continue
-                elif hardAction == 'S':
+                    finishedallhands = True
+                else:
                     if self.currentPlayingHand < len(self.hands) - 1:
                         self.currentPlayingHand += 1
                     else:
                         finishedallhands = True
-                    continue
-                finishedallhands = True
-            #Dealer has a different playing style
+
+        #Dealer has a different playing style
         # Stand on soft 17
         elif self.label == "Dealer":
             while not finishedallhands:
@@ -629,8 +643,8 @@ class BlackJackGame(object):
                 self.initBet(self.players, len(self.deck.cards))
                 self.initHands(self.players, self.dealer, self.deck, self)
                 print "===============================%d===========================" % self.dealing
-                for player in self.players:
-                    print "Player starting money %d" % player.money.amount
+                for i in range(len(self.players)):
+                    print "Player %d money %d" % (i, self.players[i].money.amount)
                 self.dealing += 1
                 #Check if dealer has black jack, it's over.
                 if self.dealer.hands[0].getTotalValue() == 21:
@@ -639,6 +653,7 @@ class BlackJackGame(object):
                             # This is a push. Don't take player money
                             player.money.add(player.bets[0].get_amount())
                         else:
+                            player.hands[0].discarded = True
                             player.lose += 1
                     #print self.player
                     #print self.dealer
@@ -673,14 +688,11 @@ class BlackJackGame(object):
                     for hand in player.hands:
                         if hand.getTotalValue() <= 21:
                             handstillinplay = True
-                            hand.discarded = False
-                        else:
-                            hand.discarded = True
                 if handstillinplay == False:
                     determineWinners(self.players, self.dealer)
                     print self.dealer
-                    for player in self.players:
-                        print "Player money %d" % player.money.amount
+                    for i in range(len(self.players)):
+                        print "Player %d money %d" % (i, self.players[i].money.amount)
                     self.endRound()
                     continue
 
@@ -696,8 +708,8 @@ class BlackJackGame(object):
 
                 #=============== Determine which hand won ===========================
                 determineWinners(self.players, self.dealer)
-                for player in self.players:
-                    print "Player money %d" % player.money.amount
+                for i in range(len(self.players)):
+                    print "Player %d money %d" % (i, self.players[i].money.amount)
                 #============Stop and delete everything==============================
                 print "Cards remaining in deck %d" % len(self.deck.cards)
                 self.endRound()
@@ -706,7 +718,8 @@ class BlackJackGame(object):
             self.count = 0
             self.deck.destroy()
 
-        for player in self.players:
+        for i in range(len(self.players)):
+            print "Player " + str(i)
             print "Player lowest money %d" % player.money.lowestamount
             print "Player highest money %d" % player.money.highestamount
             print "Player wins %d" % player.win
@@ -761,29 +774,31 @@ def determineWinners(players, dealer):
     for player in players:
         if dealerTotal <= 21:
             for i in range(len(player.hands)):
-                if player.hands[i].getTotalValue() <= 21:
+                if player.hands[i].discarded == False:
+                    if player.hands[i].getTotalValue() <= 21:
+                        playerTotal = player.hands[i].getTotalValue()
+                        if playerTotal > dealerTotal and playerTotal <= 21:
+                            # player win, take money
+                            winnings = player.bets[i].get_amount() * 2
+                            player.money.add(winnings)
+                            player.win += 1
+                        elif playerTotal == dealerTotal:
+                            #Push, push is a win
+                            player.money.add(player.bets[i].get_amount())
+                        elif playerTotal < dealerTotal:
+                            #Don't do anything if we lose, we already took the money
+                            player.lose += 1
+                        elif playerTotal > 21:
+                            # Player lose always
+                            player.lose += 1
+        elif dealerTotal > 21: # dealer bust anything still in play wins
+            for i in range(len(player.hands)):
+                if player.hands[i].discarded == False:
                     playerTotal = player.hands[i].getTotalValue()
-                    if playerTotal > dealerTotal and playerTotal <= 21:
-                        # player win, take money
+                    if playerTotal <= 21:
                         winnings = player.bets[i].get_amount() * 2
                         player.money.add(winnings)
                         player.win += 1
-                    elif playerTotal == dealerTotal:
-                        #Push, push is a win
-                        player.money.add(player.bets[i].get_amount())
-                    elif playerTotal < dealerTotal:
-                        #Don't do anything if we lose, we already took the money
-                        player.lose += 1
-                    elif playerTotal > 21:
-                        # Player lose always
-                        player.lose += 1
-        elif dealerTotal > 21: # dealer bust anything still in play wins
-            for i in range(len(player.hands)):
-                playerTotal = player.hands[i].getTotalValue()
-                if playerTotal <= 21:
-                    winnings = player.bets[i].get_amount() * 2
-                    player.money.add(winnings)
-                    player.win += 1
 
 
 class BasicStrategy(object):
