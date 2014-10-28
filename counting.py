@@ -179,6 +179,7 @@ class Hand(Deck):
         self.doubled = False
         self.justSplited = False
         self.isAceSplit = False
+        self.discarded = False
 
     def isSoftTotal(self):
         sum = 0
@@ -224,6 +225,7 @@ class Hand(Deck):
         self.justSplited = False
         del self.cards[:]
         self.isAceSplit = False
+        self.discarded = True
 
     def printUpCards(self):
         if self.label == "Dealer":
@@ -390,6 +392,7 @@ class Person(object):
 
     def add_card(self, deck, num, game):
         deck.move_cards(self.hands[self.currentPlayingHand], num, game)
+        self.hands[self.currentPlayingHand].discarded = False
 
     #Dont deallocate first hand
     def discardallhands(self):
@@ -406,7 +409,7 @@ class Person(object):
     #TODO: Add adjustedsoft, adjustedhard, and adjustedsplit to param
     def play(self, dealercard, deck, hardstrat, softstrat, splitstrat, game):
         finishedallhands = False
-        if self.label == "Player":
+        if "Player" in self.label:
             while not finishedallhands:
                 #First we bet
                 #The priority of action is as follows
@@ -591,17 +594,21 @@ class BlackJackGame(object):
     game has.
     Attributes:
         deck = a deck
-        player: player object
+        players: An list of players.
         dealer: dealer object
 
         BasicStrategy
         AdjustedStrategy
     """
-    def __init__(self, rounds, dollar):
+    def __init__(self, rounds, dollar, numOfPlayers):
         self.deck = BlackJackDeck()
         self.rounds = rounds
 
-        self.player = Person("Player", dollar)
+        self.players = []
+
+        for i in range(numOfPlayers):
+            self.players.append(Person("Player" + str(i), dollar))
+
         self.dealer = Person("Dealer")
         # Contains all strategy
         self.BasicStrategy = BasicStrategy()
@@ -619,50 +626,61 @@ class BlackJackGame(object):
             self.deck = BlackJackDeck()
             #Burn a card before we start the round
             while self.deck.size() > 78:
-                self.initBet(self.player, len(self.deck.cards))
-                self.initHands(self.player, self.dealer, self.deck, self)
+                self.initBet(self.players, len(self.deck.cards))
+                self.initHands(self.players, self.dealer, self.deck, self)
                 print "===============================%d===========================" % self.dealing
-                print "Player starting money %d" % self.player.money.amount
+                for player in self.players:
+                    print "Player starting money %d" % player.money.amount
                 self.dealing += 1
-                #Check if dealer has black jack
+                #Check if dealer has black jack, it's over.
                 if self.dealer.hands[0].getTotalValue() == 21:
-                    if self.player.hands[0].getTotalValue() == 21:
-                        # This is a push. Don't take player mone
-                        self.player.money.add(self.player.bets[0].get_amount())
-                    else:
-                        self.player.lose += 1
-                    print self.player
-                    print self.dealer
+                    for player in self.players:
+                        if player.hands[0].getTotalValue() == 21:
+                            # This is a push. Don't take player money
+                            player.money.add(player.bets[0].get_amount())
+                        else:
+                            player.lose += 1
+                    #print self.player
+                    #print self.dealer
                     self.endRound()
                     continue
                 else:
-                    if self.player.hands[0].getTotalValue() == 21:
-                        self.player.money.add(self.player.bets[0].get_amount() * 2.5)
-                        self.player.win += 1
-                        print self.player
-                        print self.dealer
+                    for player in self.players:
+                        if player.hands[0].getTotalValue() == 21:
+                            player.money.add(player.bets[0].get_amount() * 2.5)
+                            player.win += 1
+                            player.hands[0].discarded = True
+                            print player
+                            print self.dealer
+                    if not self.isAnyPlayersStillPlaying():
                         self.endRound()
                         continue
                 #================================================================
 
                 # Player goes first
-                self.player.play(self.dealer.getDealerFaceupCard(),
-                                 self.deck,
-                                 self.BasicStrategy.HardMatrix,
-                                 self.BasicStrategy.SoftMatrix,
-                                 self.BasicStrategy.SplitMatrix,
-                                 self)
-                print self.player
+                for player in self.players:
+                    player.play(self.dealer.getDealerFaceupCard(),
+                                     self.deck,
+                                     self.BasicStrategy.HardMatrix,
+                                     self.BasicStrategy.SoftMatrix,
+                                     self.BasicStrategy.SplitMatrix,
+                                     self)
+                    print player
 
                 # Stop playing if all hands of player has busted
                 handstillinplay = False
-                for hands in self.player.hands:
-                    if hands.getTotalValue() <= 21:
-                        handstillinplay = True
+                for player in self.players:
+                    for hand in player.hands:
+                        if hand.getTotalValue() <= 21:
+                            handstillinplay = True
+                            hand.discarded = False
+                        else:
+                            hand.discarded = True
                 if handstillinplay == False:
-                    determineWinners(self.player, self.dealer)
+                    determineWinners(self.players, self.dealer)
                     print self.dealer
-                    print "Player money %d" % self.player.money.amount
+                    for player in self.players:
+                        print "Player money %d" % player.money.amount
                     self.endRound()
                     continue
 
@@ -677,9 +695,9 @@ class BlackJackGame(object):
                 print self.dealer
 
                 #=============== Determine which hand won ===========================
-                determineWinners(self.player, self.dealer)
-
-                print "Player money %d" % self.player.money.amount
+                determineWinners(self.players, self.dealer)
+                for player in self.players:
+                    print "Player money %d" % player.money.amount
                 #============Stop and delete everything==============================
                 print "Cards remaining in deck %d" % len(self.deck.cards)
                 self.endRound()
@@ -688,21 +706,31 @@ class BlackJackGame(object):
             self.count = 0
             self.deck.destroy()
 
-        print "Player lowest money %d" % self.player.money.lowestamount
-        print "Player highest money %d" % self.player.money.highestamount
-        print "Player wins %d" % self.player.win
-        print "Player losses %d" % self.player.lose
-        print "Total Games %d" % self.dealing
-        print "Player win rate %3.3f percent" % ((self.player.win / self.dealing) * 100)
-        print "Player final money %d" % self.player.money.amount
+        for player in self.players:
+            print "Player lowest money %d" % player.money.lowestamount
+            print "Player highest money %d" % player.money.highestamount
+            print "Player wins %d" % player.win
+            print "Player losses %d" % player.lose
+            print "Total Games %d" % self.dealing
+            print "Player win rate %3.3f percent" % ((player.win / self.dealing) * 100)
+            print "Player final money %d" % player.money.amount
 
     def endRound(self):
-        self.player.money.determinehighestamount()
-        self.player.money.determinelowestamount()
-        self.player.discardallhands()
+        for player in self.players:
+            player.money.determinehighestamount()
+            player.money.determinelowestamount()
+            player.discardallhands()
         self.dealer.discardallhands()
 
-    def initBet(self, player, remainingcards):
+    def isAnyPlayersStillPlaying(self):
+        stillPlaying = False
+        for player in self.players:
+            for hand in player.hands:
+                if hand.getTotalValue() <= 21 and not hand.discarded:
+                    stillPlaying = True
+        return stillPlaying
+
+    def initBet(self, players, remainingcards):
         deckremaining = (float(remainingcards)/52)
         truecount = int(float(self.count)/deckremaining)
         print "Running Count: %d" % self.count
@@ -711,45 +739,51 @@ class BlackJackGame(object):
         print "True Count %d" % truecount
 
         if truecount <= 0:
-            player.bets.append(Bet(10))
-            player.money.initialBet(player.bets[-1])
+            for player in players:
+                player.bets.append(Bet(10))
+                player.money.initialBet(player.bets[-1])
         elif truecount > 0:
-            player.bets.append(Bet(10 + (5 * truecount)))
-            player.money.initialBet(player.bets[-1])
+            for player in players:
+                player.bets.append(Bet(10 + (5 * truecount)))
+                player.money.initialBet(player.bets[-1])
 
-    def initHands(self, player, dealer, deck, game):
-        # Deal hands alternating to player and dealer
-        player.add_card(deck, 1, game)
+    def initHands(self, players, dealer, deck, game):
+        # Deal hands alternating to players and dealer
+        for player in players:
+            player.add_card(deck, 1, game)
         dealer.add_card(deck, 1, game)
-        player.add_card(deck, 1, game)
+        for player in players:
+            player.add_card(deck, 1, game)
         dealer.add_card(deck, 1, game)
 
-def determineWinners(player, dealer):
+def determineWinners(players, dealer):
     dealerTotal = dealer.hands[0].getTotalValue()
-
-    if dealerTotal <= 21:
-        for i in range(len(player.hands)):
-            playerTotal = player.hands[i].getTotalValue()
-            if playerTotal > dealerTotal and playerTotal <= 21:
-                # player win, take money
-                winnings = player.bets[i].get_amount() * 2
-                player.money.add(winnings)
-                player.win += 1
-            elif playerTotal == dealerTotal:
-                player.money.add(player.bets[i].get_amount())
-            elif playerTotal < dealerTotal:
-                #Don't do anything if we lose, we already took the money
-                player.lose += 1
-            elif playerTotal > 21:
-                # Player lose always
-                player.lose += 1
-    elif dealerTotal > 21: # dealer bust anything still in play wins
-        for i in range(len(player.hands)):
-            playerTotal = player.hands[i].getTotalValue()
-            if playerTotal <= 21:
-                winnings = player.bets[i].get_amount() * 2
-                player.money.add(winnings)
-                player.win += 1
+    for player in players:
+        if dealerTotal <= 21:
+            for i in range(len(player.hands)):
+                if player.hands[i].getTotalValue() <= 21:
+                    playerTotal = player.hands[i].getTotalValue()
+                    if playerTotal > dealerTotal and playerTotal <= 21:
+                        # player win, take money
+                        winnings = player.bets[i].get_amount() * 2
+                        player.money.add(winnings)
+                        player.win += 1
+                    elif playerTotal == dealerTotal:
+                        #Push, push is a win
+                        player.money.add(player.bets[i].get_amount())
+                    elif playerTotal < dealerTotal:
+                        #Don't do anything if we lose, we already took the money
+                        player.lose += 1
+                    elif playerTotal > 21:
+                        # Player lose always
+                        player.lose += 1
+        elif dealerTotal > 21: # dealer bust anything still in play wins
+            for i in range(len(player.hands)):
+                playerTotal = player.hands[i].getTotalValue()
+                if playerTotal <= 21:
+                    winnings = player.bets[i].get_amount() * 2
+                    player.money.add(winnings)
+                    player.win += 1
 
 
 class BasicStrategy(object):
@@ -830,21 +864,24 @@ class AdjustedStrategy(object):
 def main(argv):
     dollar = ''
     rounds = ''
+    players = ''
     try:
-        opts, args = getopt.getopt(argv, "hd:r:", ["dollar=", "rounds="])
+        opts, args = getopt.getopt(argv, "hd:r:p:", ["dollar=", "rounds=", "players="])
     except getopt.GetoptError:
-        print 'counting.py -d <starting dollars> -r <number of rounds>'
+        print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'counting.py -d <starting dollars> -r <number of rounds>'
+            print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players>'
             sys.exit()
         elif opt in ("-d", "--dollar"):
             dollar = arg
         elif opt in ("-r", "--rounds"):
             rounds = arg
+        elif opt in ("-p", "--players"):
+            players = arg
 
-    game = BlackJackGame(int(rounds), int(dollar))
+    game = BlackJackGame(int(rounds), int(dollar), int(players))
     game.play()
 
 if __name__ == "__main__":
