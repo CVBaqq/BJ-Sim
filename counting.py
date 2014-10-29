@@ -530,10 +530,14 @@ class Person(object):
                                 else:
                                     finishedallhands = True
                                 continue
-                            # give a card if we can't double
+                            # give a card if we can't double but only if it's not a soft 18 vs dealer 3-6
                             if len(self.hands[self.currentPlayingHand].cards) > 2 and self.hands[self.currentPlayingHand].doubled == False:
-                                deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
-                                continue
+                                softvalue = self.hands[self.currentPlayingHand].getTotalValue()
+                                if softvalue == 18 and int(dealercard) >= 3 and int(dealercard) <= 6:
+                                    continue
+                                else:
+                                    deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                                    continue
                         # We want to see what our action is for a hard hand here.
                         # so continue the rundown
                         #elif softAction == 'S':
