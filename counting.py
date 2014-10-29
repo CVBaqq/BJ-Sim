@@ -364,6 +364,8 @@ class Person(object):
         self.money = Money(money)
         self.win = 0
         self.lose = 0
+        self.tie = 0
+        self.numOfHands = 0
 
     def split(self):
         splitted = False
@@ -408,7 +410,7 @@ class Person(object):
 
     # We will let the player play
     #TODO: Add adjustedsoft, adjustedhard, and adjustedsplit to param
-    def play(self, dealercard, deck, hardstrat, softstrat, splitstrat, game):
+    def play(self, dealercard, deck, basicStrat, adjustedStrat, game):
         finishedallhands = False
         if "Player" in self.label:
             while not finishedallhands:
@@ -445,18 +447,36 @@ class Person(object):
                     #Assume default action is not to split
                     if splitLabelLookup != '':
                         try:
-                            splitAction = splitstrat[splitLabelLookup][dealercard]
+                            splitAction = basicStrat.SplitMatrix[splitLabelLookup][dealercard]
                         except KeyError, e:
                             print "Shouldn't hit here"
                             splitAction = 'N'
                         except IndexError, e:
                             print "Shouldn't hit here"
                             splitAction = 'N'
+                        try:
+                            adjustedSplitAction = adjustedStrat.AdjustedSplitMatrix[splitLabelLookup][dealercard]
+                        except KeyError, e:
+                            print "AdjustedSplitAction failed lookup 1"
+                            adjustedSplitAction = 'N'
+                        except IndexError, e:
+                            print "AdjustedSplitAction failed lookup 2"
+                            adjustedSplitAction = 'N'
+
+                        if adjustedSplitAction != 'N':
+                            index = int(adjustedSplitAction)
+                            remainingcards = len(game.deck.cards)
+                            deckremaining = (float(remainingcards)/52)
+                            truecount = int(float(game.count)/deckremaining)
+                            if truecount >= index:
+                                splitAction = 'Y'
+
                         if splitAction == 'Y':
                             didsplit = self.split()
                             if didsplit:
                                 self.bets.append(Bet(self.bets[self.currentPlayingHand].get_amount()))
                                 self.money.split(self.bets[-1])
+                                self.numOfHands += 1
                             # We want to redo the loop so it can reevaluate itself
                             continue
                         #print 'Split Action: ' + splitAction
@@ -464,7 +484,7 @@ class Person(object):
                     softLabelLookup = str(self.hands[self.currentPlayingHand].getTotalValue())
                     if self.hands[self.currentPlayingHand].isSoftTotal():
                         try:
-                            softAction = softstrat[softLabelLookup][dealercard]
+                            softAction = basicStrat.SoftMatrix[softLabelLookup][dealercard]
                             # We don't have mapping for 12 and under, so move a long to hard hitting
                         except KeyError, e:
                             print "Shouldn't hit here"
@@ -472,7 +492,24 @@ class Person(object):
                         except IndexError, e:
                             print "Shouldn't hit here"
                             softAction = 'H'
-                        #print 'Soft Action: ' + softAction
+                        try:
+                            adjustedSoftAction = adjustedStrat.AdjustedSoftMatrix[softLabelLookup][dealercard]
+                        except KeyError, e:
+                            print "AdjustedSoftAction failed lookup 1"
+                            adjustedSoftAction = 'N'
+                        except IndexError, e:
+                            print "AdjustedSoftAction failed lookup 2"
+                            adjustedSoftAction = 'N'
+
+                        if adjustedSoftAction != 'N':
+                            index = int(adjustedSoftAction)
+                            remainingcards = len(game.deck.cards)
+                            deckremaining = (float(remainingcards)/52)
+                            truecount = int(float(game.count)/deckremaining)
+                            if truecount >= index:
+                                print "Look"
+                                softAction = 'D'
+
                         if softAction == 'H':
                             deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
                             continue
@@ -507,7 +544,7 @@ class Person(object):
                     #print "Hard Label Lookup: " + hardLabelLookup
                     #print "Dealer faceup card: " + dealercard
                     try:
-                        hardAction = hardstrat[hardLabelLookup][dealercard]
+                        hardAction = basicStrat.HardMatrix[hardLabelLookup][dealercard]
                         # use default hit if index can't be looked up
                         # may cause problems here
                     except KeyError, e:
@@ -516,6 +553,41 @@ class Person(object):
                     except IndexError, e:
                         print "Shouldn't hit here"
                         hardAction = 'S'
+
+                    try:
+                        adjustedHardAction = adjustedStrat.AdjustedHardMatrix[hardLabelLookup][dealercard]
+                    except KeyError, e:
+                        print "AdjustedHardAction failed lookup 1"
+                        adjustedHardAction = 'N'
+                    except IndexError, e:
+                        print "AdjustedHardAction failed lookup 2"
+                        adjustedHardAction = 'N'
+
+                    if adjustedHardAction != 'N':
+                        try:
+                            adjustedHardActionAction = adjustedStrat.AdjustedHardActionMatrix[hardLabelLookup][dealercard]
+                        except KeyError, e:
+                            print "AdjustedHardActionAction failed lookup 1"
+                            adjustedHardActionAction = 'N'
+                        except IndexError, e:
+                            print "AdjustedHardActionAction failed lookup 2"
+                            adjustedHardActionAction = 'N'
+                        remainingcards = len(game.deck.cards)
+                        deckremaining = (float(remainingcards)/52)
+                        truecount = int(float(game.count)/deckremaining)
+                        if adjustedHardAction == '0+':
+                            if truecount >= 0:
+                                hardAction = adjustedHardActionAction
+                        elif adjustedHardAction == '0-':
+                            if truecount <= 0:
+                                hardAction = adjustedHardActionAction
+                        elif adjustedHardAction == '-1':
+                            if truecount <= 1:
+                                hardAction = adjustedHardActionAction
+                        else:
+                            index = int(adjustedHardAction)
+                            if truecount >= index:
+                                hardAction = adjustedHardActionAction
 
                     #print 'Hard Action: ' + hardAction
                     #print softLabelLookup
@@ -629,7 +701,7 @@ class BlackJackGame(object):
         self.AdjustedStrategy = AdjustedStrategy()
         # Keep track of a count
         self.count = 0
-        # Dealing
+        # Number of dealings
         self.dealing = 0
 
     def play(self):
@@ -642,16 +714,17 @@ class BlackJackGame(object):
             while self.deck.size() > 78:
                 self.initBet(self.players, len(self.deck.cards))
                 self.initHands(self.players, self.dealer, self.deck, self)
+                self.dealing += 1
                 print "===============================%d===========================" % self.dealing
                 for i in range(len(self.players)):
                     print "Player %d money %d" % (i, self.players[i].money.amount)
-                self.dealing += 1
                 #Check if dealer has black jack, it's over.
                 if self.dealer.hands[0].getTotalValue() == 21:
                     for player in self.players:
                         if player.hands[0].getTotalValue() == 21:
                             # This is a push. Don't take player money
                             player.money.add(player.bets[0].get_amount())
+                            player.tie += 1
                         else:
                             player.hands[0].discarded = True
                             player.lose += 1
@@ -667,7 +740,7 @@ class BlackJackGame(object):
                             player.hands[0].discarded = True
                             print player
                             print self.dealer
-                    if not self.isAnyPlayersStillPlaying():
+                    if self.isAnyPlayersStillPlaying() == False:
                         self.endRound()
                         continue
                 #================================================================
@@ -676,9 +749,8 @@ class BlackJackGame(object):
                 for player in self.players:
                     player.play(self.dealer.getDealerFaceupCard(),
                                      self.deck,
-                                     self.BasicStrategy.HardMatrix,
-                                     self.BasicStrategy.SoftMatrix,
-                                     self.BasicStrategy.SplitMatrix,
+                                     self.BasicStrategy,
+                                     self.AdjustedStrategy,
                                      self)
                     print player
 
@@ -700,9 +772,8 @@ class BlackJackGame(object):
                 # Dealer reveal, or when dealer starts hitting
                 self.dealer.play(self.dealer.getDealerFaceupCard(),
                                  self.deck,
-                                 self.BasicStrategy.HardMatrix,
-                                 self.BasicStrategy.SoftMatrix,
-                                 self.BasicStrategy.SplitMatrix,
+                                 self.BasicStrategy,
+                                 self.AdjustedStrategy,
                                  self)
                 print self.dealer
 
@@ -719,14 +790,21 @@ class BlackJackGame(object):
             self.deck.destroy()
 
         for i in range(len(self.players)):
+            print "=============================================================="
             print "Player " + str(i)
-            print "Player lowest money %d" % player.money.lowestamount
-            print "Player highest money %d" % player.money.highestamount
-            print "Player wins %d" % player.win
-            print "Player losses %d" % player.lose
+            print "Player lowest money %d" % self.players[i].money.lowestamount
+            print "Player highest money %d" % self.players[i].money.highestamount
+            print "Player wins %d" % self.players[i].win
+            print "Player losses %d" % self.players[i].lose
             print "Total Games %d" % self.dealing
-            print "Player win rate %3.3f percent" % ((player.win / self.dealing) * 100)
-            print "Player final money %d" % player.money.amount
+            print "Player win rate %3.3f percent" % ((self.players[i].win / self.players[i].numOfHands) * 100)
+            print "Player tie rate %3.3f percent" % ((self.players[i].tie / self.players[i].numOfHands) * 100)
+            print "Player loss rate %3.3f percent" % ((self.players[i].lose / self.players[i].numOfHands) * 100)
+            print "Total percentage %3.3f percent" % (((self.players[i].win / self.players[i].numOfHands) * 100) +
+                                                      ((self.players[i].tie / self.players[i].numOfHands) * 100) +
+                                                      ((self.players[i].lose / self.players[i].numOfHands) * 100))
+            print "Player final money %d" % self.players[i].money.amount
+            print "================================================"
 
     def endRound(self):
         for player in self.players:
@@ -739,7 +817,7 @@ class BlackJackGame(object):
         stillPlaying = False
         for player in self.players:
             for hand in player.hands:
-                if hand.getTotalValue() <= 21 and not hand.discarded:
+                if hand.getTotalValue() <= 21 and hand.discarded == False:
                     stillPlaying = True
         return stillPlaying
 
@@ -768,6 +846,9 @@ class BlackJackGame(object):
         for player in players:
             player.add_card(deck, 1, game)
         dealer.add_card(deck, 1, game)
+        for player in players:
+            player.numOfHands += 1
+        dealer.numOfHands += 1
 
 def determineWinners(players, dealer):
     dealerTotal = dealer.hands[0].getTotalValue()
@@ -775,22 +856,22 @@ def determineWinners(players, dealer):
         if dealerTotal <= 21:
             for i in range(len(player.hands)):
                 if player.hands[i].discarded == False:
-                    if player.hands[i].getTotalValue() <= 21:
-                        playerTotal = player.hands[i].getTotalValue()
-                        if playerTotal > dealerTotal and playerTotal <= 21:
+                    playertotal = player.hands[i].getTotalValue()
+                    if playertotal <= 21:
+                        if playertotal > dealerTotal and playertotal <= 21:
                             # player win, take money
                             winnings = player.bets[i].get_amount() * 2
                             player.money.add(winnings)
                             player.win += 1
-                        elif playerTotal == dealerTotal:
+                        elif playertotal == dealerTotal:
                             #Push, push is a win
                             player.money.add(player.bets[i].get_amount())
-                        elif playerTotal < dealerTotal:
+                            player.tie += 1
+                        elif playertotal < dealerTotal:
                             #Don't do anything if we lose, we already took the money
                             player.lose += 1
-                        elif playerTotal > 21:
-                            # Player lose always
-                            player.lose += 1
+                    else:
+                        player.lose += 1
         elif dealerTotal > 21: # dealer bust anything still in play wins
             for i in range(len(player.hands)):
                 if player.hands[i].discarded == False:
@@ -799,6 +880,8 @@ def determineWinners(players, dealer):
                         winnings = player.bets[i].get_amount() * 2
                         player.money.add(winnings)
                         player.win += 1
+                    else:
+                        player.lose += 1
 
 
 class BasicStrategy(object):
@@ -820,11 +903,6 @@ class BasicStrategy(object):
         populateMatrix(self.HardMatrix, hardFile)
         populateMatrix(self.SoftMatrix, softFile)
         populateMatrix(self.SplitMatrix, splitFile)
-        print self.HardMatrix["9"]
-        print self.SoftMatrix['13']
-        print self.SplitMatrix['99']
-
-
 
         hardFile.close()
         softFile.close()
@@ -858,23 +936,22 @@ class AdjustedStrategy(object):
         hardFile = open('adjustedhard')
         softFile = open('adjustedsoft')
         splitFile = open('adjustedsplit')
+        hardActionFile = open('adjustedhardaction')
 
         self.AdjustedHardMatrix = dict()
         self.AdjustedSoftMatrix = dict()
         self.AdjustedSplitMatrix = dict()
+        self.AdjustedHardActionMatrix = dict()
 
-        """populateMatrix(self.AdjustedHardMatrix, hardFile)
+        populateMatrix(self.AdjustedHardMatrix, hardFile)
         populateMatrix(self.AdjustedSoftMatrix, softFile)
         populateMatrix(self.AdjustedSplitMatrix, splitFile)
-
-        print self.AdjustedHardMatrix["12"]
-        print self.AdjustedSoftMatrix['13']
-        print self.AdjustedSplitMatrix['99']"""
+        populateMatrix(self.AdjustedHardActionMatrix, hardActionFile)
 
         hardFile.close()
         softFile.close()
         splitFile.close()
-
+        hardActionFile.close()
 
 def main(argv):
     dollar = ''
