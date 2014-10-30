@@ -449,25 +449,21 @@ class Person(object):
                         try:
                             splitAction = basicStrat.SplitMatrix[splitLabelLookup][dealercard]
                         except KeyError, e:
-                            print "Shouldn't hit here"
                             splitAction = 'N'
                         except IndexError, e:
-                            print "Shouldn't hit here"
                             splitAction = 'N'
                         try:
                             adjustedSplitAction = adjustedStrat.AdjustedSplitMatrix[splitLabelLookup][dealercard]
                         except KeyError, e:
-                            print "AdjustedSplitAction failed lookup 1"
                             adjustedSplitAction = 'N'
                         except IndexError, e:
-                            print "AdjustedSplitAction failed lookup 2"
                             adjustedSplitAction = 'N'
 
                         if adjustedSplitAction != 'N':
                             index = int(adjustedSplitAction)
                             remainingcards = len(game.deck.cards)
-                            deckremaining = (float(remainingcards)/52)
-                            truecount = int(float(game.count)/deckremaining)
+                            deckremaining = round(remainingcards/52)
+                            truecount = int(round(game.count/deckremaining))
                             if truecount >= index:
                                 splitAction = 'Y'
 
@@ -487,27 +483,22 @@ class Person(object):
                             softAction = basicStrat.SoftMatrix[softLabelLookup][dealercard]
                             # We don't have mapping for 12 and under, so move a long to hard hitting
                         except KeyError, e:
-                            print "Shouldn't hit here"
                             softAction = 'H'
                         except IndexError, e:
-                            print "Shouldn't hit here"
                             softAction = 'H'
                         try:
                             adjustedSoftAction = adjustedStrat.AdjustedSoftMatrix[softLabelLookup][dealercard]
                         except KeyError, e:
-                            print "AdjustedSoftAction failed lookup 1"
                             adjustedSoftAction = 'N'
                         except IndexError, e:
-                            print "AdjustedSoftAction failed lookup 2"
                             adjustedSoftAction = 'N'
 
                         if adjustedSoftAction != 'N':
                             index = int(adjustedSoftAction)
                             remainingcards = len(game.deck.cards)
-                            deckremaining = (float(remainingcards)/52)
-                            truecount = int(float(game.count)/deckremaining)
+                            deckremaining = round(remainingcards/52)
+                            truecount = int(round(game.count/deckremaining))
                             if truecount >= index:
-                                print "Look"
                                 softAction = 'D'
 
                         if softAction == 'H':
@@ -548,33 +539,27 @@ class Person(object):
                         # use default hit if index can't be looked up
                         # may cause problems here
                     except KeyError, e:
-                        print "Shouldn't hit here"
                         hardAction = 'S'
                     except IndexError, e:
-                        print "Shouldn't hit here"
                         hardAction = 'S'
 
                     try:
                         adjustedHardAction = adjustedStrat.AdjustedHardMatrix[hardLabelLookup][dealercard]
                     except KeyError, e:
-                        print "AdjustedHardAction failed lookup 1"
                         adjustedHardAction = 'N'
                     except IndexError, e:
-                        print "AdjustedHardAction failed lookup 2"
                         adjustedHardAction = 'N'
 
                     if adjustedHardAction != 'N':
                         try:
                             adjustedHardActionAction = adjustedStrat.AdjustedHardActionMatrix[hardLabelLookup][dealercard]
                         except KeyError, e:
-                            print "AdjustedHardActionAction failed lookup 1"
                             adjustedHardActionAction = 'N'
                         except IndexError, e:
-                            print "AdjustedHardActionAction failed lookup 2"
                             adjustedHardActionAction = 'N'
                         remainingcards = len(game.deck.cards)
-                        deckremaining = (float(remainingcards)/52)
-                        truecount = int(float(game.count)/deckremaining)
+                        deckremaining = round(remainingcards/52)
+                        truecount = int(round(game.count/deckremaining))
                         if adjustedHardAction == '0+':
                             if truecount >= 0:
                                 hardAction = adjustedHardActionAction
@@ -822,8 +807,8 @@ class BlackJackGame(object):
         return stillPlaying
 
     def initBet(self, players, remainingcards):
-        deckremaining = (float(remainingcards)/52)
-        truecount = int(float(self.count)/deckremaining)
+        deckremaining = round(remainingcards/52)
+        truecount = int(round(self.count/deckremaining))
         print "Running Count: %d" % self.count
         print "Cards Remaining %d" % remainingcards
         print "Decks Remaining %d" % deckremaining
