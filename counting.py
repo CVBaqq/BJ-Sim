@@ -473,8 +473,8 @@ class Person(object):
                                 self.bets.append(Bet(self.bets[self.currentPlayingHand].get_amount()))
                                 self.money.split(self.bets[-1])
                                 self.numOfHands += 1
-                            # We want to redo the loop so it can reevaluate itself
-                            continue
+                                # We want to redo the loop so it can reevaluate itself
+                                continue
                         #print 'Split Action: ' + splitAction
                     # Assume default action is to hit
                     softLabelLookup = str(self.hands[self.currentPlayingHand].getTotalValue())
