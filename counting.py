@@ -428,13 +428,13 @@ class Person(object):
                 if self.hands[self.currentPlayingHand].discarded == False:
                     if self.hands[self.currentPlayingHand].justSplited:
                         deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
+                        self.hands[self.currentPlayingHand].justSplited = False
                         if self.hands[self.currentPlayingHand].isAceSplit:
                             if self.currentPlayingHand < len(self.hands) - 1:
                                 self.currentPlayingHand += 1
                             else:
                                 finishedallhands = True
                             continue
-                        self.hands[self.currentPlayingHand].justSplited = False
 
                     if self.hands[self.currentPlayingHand].doubled:
                         if self.currentPlayingHand < len(self.hands) - 1:
@@ -481,7 +481,7 @@ class Person(object):
                     if self.hands[self.currentPlayingHand].isSoftTotal():
                         try:
                             softAction = basicStrat.SoftMatrix[softLabelLookup][dealercard]
-                            # We don't have mapping for 12 and under, so move a long to hard hitting
+                            # We don't have mapping for 12 and under (AA is splitted), so move along to hard hitting
                         except KeyError, e:
                             softAction = 'H'
                         except IndexError, e:
@@ -521,14 +521,13 @@ class Person(object):
                                 else:
                                     finishedallhands = True
                                 continue
-                            # give a card if we can't double
+                            # just hit/give a card if we can't double
                             if len(self.hands[self.currentPlayingHand].cards) > 2 and self.hands[self.currentPlayingHand].doubled == False:
                                 deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
                                 continue
                         # We want to see what our action is for a hard hand here.
                         # so continue the rundown
                         #elif softAction == 'S':
-
 
                     # Assume default action is to stand
                     hardLabelLookup = str(softLabelLookup)
@@ -567,7 +566,7 @@ class Person(object):
                             if truecount <= 0:
                                 hardAction = adjustedHardActionAction
                         elif adjustedHardAction == '-1':
-                            if truecount <= 1:
+                            if truecount <= -1:
                                 hardAction = adjustedHardActionAction
                         else:
                             index = int(adjustedHardAction)
@@ -599,7 +598,7 @@ class Person(object):
                             else:
                                 finishedallhands = True
                             continue
-                        # give a card if we can't double
+                        # give a card if we can't double due to 3 or more cards already in hand
                         if len(self.hands[self.currentPlayingHand].cards) > 2 and self.hands[self.currentPlayingHand].doubled == False:
                             deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
                             continue
@@ -713,8 +712,8 @@ class BlackJackGame(object):
                         else:
                             player.hands[0].discarded = True
                             player.lose += 1
-                    #print self.player
-                    #print self.dealer
+                        print player
+                    print self.dealer
                     self.endRound()
                     continue
                 else:
@@ -740,12 +739,12 @@ class BlackJackGame(object):
                     print player
 
                 # Stop playing if all hands of player has busted
-                handstillinplay = False
+                hasallplayersnotbusted = False
                 for player in self.players:
                     for hand in player.hands:
                         if hand.getTotalValue() <= 21:
-                            handstillinplay = True
-                if handstillinplay == False:
+                            hasallplayersnotbusted = True
+                if hasallplayersnotbusted == False:
                     determineWinners(self.players, self.dealer)
                     print self.dealer
                     for i in range(len(self.players)):
