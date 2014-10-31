@@ -379,14 +379,15 @@ class Person(object):
             return splitted
 
         newHand = Hand()
+        newHand.justSplited = True
         newHand.add_card(self.hands[self.currentPlayingHand].cards.pop(-1))
         # Can't double when the splitted hands were aces
         if Card.rank_names[newHand.cards[0].rank] == "Ace":
             newHand.doubled = True
             newHand.justSplited = True
             newHand.isAceSplit = True
-            self.hands[self.currentPlayingHand].justSplited = True
             self.hands[self.currentPlayingHand].isAceSplit = True
+        self.hands[self.currentPlayingHand].justSplited = True
 
         splitted = True
         self.hands.append(newHand)
