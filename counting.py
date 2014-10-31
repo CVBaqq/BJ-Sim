@@ -452,20 +452,6 @@ class Person(object):
                             splitAction = 'N'
                         except IndexError, e:
                             splitAction = 'N'
-                        try:
-                            adjustedSplitAction = adjustedStrat.AdjustedSplitMatrix[splitLabelLookup][dealercard]
-                        except KeyError, e:
-                            adjustedSplitAction = 'N'
-                        except IndexError, e:
-                            adjustedSplitAction = 'N'
-
-                        if adjustedSplitAction != 'N':
-                            index = int(adjustedSplitAction)
-                            remainingcards = len(game.deck.cards)
-                            deckremaining = round(remainingcards/52)
-                            truecount = int(round(game.count/deckremaining))
-                            if truecount >= index:
-                                splitAction = 'Y'
 
                         if splitAction == 'Y':
                             didsplit = self.split()
@@ -486,20 +472,6 @@ class Person(object):
                             softAction = 'H'
                         except IndexError, e:
                             softAction = 'H'
-                        try:
-                            adjustedSoftAction = adjustedStrat.AdjustedSoftMatrix[softLabelLookup][dealercard]
-                        except KeyError, e:
-                            adjustedSoftAction = 'N'
-                        except IndexError, e:
-                            adjustedSoftAction = 'N'
-
-                        if adjustedSoftAction != 'N':
-                            index = int(adjustedSoftAction)
-                            remainingcards = len(game.deck.cards)
-                            deckremaining = round(remainingcards/52)
-                            truecount = int(round(game.count/deckremaining))
-                            if truecount >= index:
-                                softAction = 'D'
 
                         if softAction == 'H':
                             deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
@@ -541,37 +513,6 @@ class Person(object):
                         hardAction = 'S'
                     except IndexError, e:
                         hardAction = 'S'
-
-                    try:
-                        adjustedHardAction = adjustedStrat.AdjustedHardMatrix[hardLabelLookup][dealercard]
-                    except KeyError, e:
-                        adjustedHardAction = 'N'
-                    except IndexError, e:
-                        adjustedHardAction = 'N'
-
-                    if adjustedHardAction != 'N':
-                        try:
-                            adjustedHardActionAction = adjustedStrat.AdjustedHardActionMatrix[hardLabelLookup][dealercard]
-                        except KeyError, e:
-                            adjustedHardActionAction = 'N'
-                        except IndexError, e:
-                            adjustedHardActionAction = 'N'
-                        remainingcards = len(game.deck.cards)
-                        deckremaining = round(remainingcards/52)
-                        truecount = int(round(game.count/deckremaining))
-                        if adjustedHardAction == '0+':
-                            if truecount >= 0:
-                                hardAction = adjustedHardActionAction
-                        elif adjustedHardAction == '0-':
-                            if truecount <= 0:
-                                hardAction = adjustedHardActionAction
-                        elif adjustedHardAction == '-1':
-                            if truecount <= -1:
-                                hardAction = adjustedHardActionAction
-                        else:
-                            index = int(adjustedHardAction)
-                            if truecount >= index:
-                                hardAction = adjustedHardActionAction
 
                     #print 'Hard Action: ' + hardAction
                     #print softLabelLookup
