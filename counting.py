@@ -274,10 +274,12 @@ class Hand(Deck):
 
 
     def __str__(self):
-        discarded = "Discarded: %r " % self.discarded
+        discarded = "Discarded: %r, " % self.discarded
+        doubled = "Doubled: %r, " % self.doubled
+        justsplitted = "JustSplitted: %r\n" % self.justSplited
         cardstr = ', '.join(x.__str__() for x in self.cards)
         str = "Cards: %s " % (cardstr)
-        return discarded + str
+        return discarded + doubled + justsplitted + str
 
 class Money(object):
 
@@ -379,14 +381,15 @@ class Person(object):
             return splitted
 
         newHand = Hand()
+        newHand.justSplited = True
         newHand.add_card(self.hands[self.currentPlayingHand].cards.pop(-1))
         # Can't double when the splitted hands were aces
         if Card.rank_names[newHand.cards[0].rank] == "Ace":
             newHand.doubled = True
             newHand.justSplited = True
             newHand.isAceSplit = True
-            self.hands[self.currentPlayingHand].justSplited = True
             self.hands[self.currentPlayingHand].isAceSplit = True
+        self.hands[self.currentPlayingHand].justSplited = True
 
         splitted = True
         self.hands.append(newHand)
@@ -475,7 +478,6 @@ class Person(object):
                                 self.numOfHands += 1
                                 # We want to redo the loop so it can reevaluate itself
                                 continue
-                        #print 'Split Action: ' + splitAction
                     # Assume default action is to hit
                     softLabelLookup = str(self.hands[self.currentPlayingHand].getTotalValue())
                     if self.hands[self.currentPlayingHand].isSoftTotal():
