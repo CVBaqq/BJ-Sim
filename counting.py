@@ -368,6 +368,7 @@ class Person(object):
         self.lose = 0
         self.tie = 0
         self.numOfHands = 0
+        self.numOfAdjustedHands = 0
 
     def split(self):
         splitted = False
@@ -461,14 +462,25 @@ class Person(object):
                             adjustedSplitAction = 'N'
                         except IndexError, e:
                             adjustedSplitAction = 'N'
+                        try:
+                            adjustedSplitSign = adjustedStrat.AdjustedSplitSignMatrix[splitLabelLookup][dealercard]
+                        except KeyError, e:
+                            adjustedSplitSign = 'N'
+                        except IndexError, e:
+                            adjustedSplitSign = 'N'
 
                         if adjustedSplitAction != 'N':
                             index = int(adjustedSplitAction)
                             remainingcards = len(game.deck.cards)
                             deckremaining = round(remainingcards/52)
                             truecount = int(round(game.count/deckremaining))
-                            if truecount >= index:
-                                splitAction = 'Y'
+                            self.numOfAdjustedHands += 1
+                            if adjustedSplitSign == '+':
+                                if truecount >= index:
+                                    splitAction = 'Y'
+                            elif adjustedSplitSign == '-':
+                                if truecount <= index:
+                                    splitAction = 'Y'
 
                         if splitAction == 'Y':
                             didsplit = self.split()
@@ -494,14 +506,25 @@ class Person(object):
                             adjustedSoftAction = 'N'
                         except IndexError, e:
                             adjustedSoftAction = 'N'
+                        try:
+                            adjustedSoftSign = adjustedStrat.AdjustedSoftSignMatrix[softLabelLookup][dealercard]
+                        except KeyError, e:
+                            adjustedSoftSign = 'N'
+                        except IndexError, e:
+                            adjustedSoftSign = 'N'
 
                         if adjustedSoftAction != 'N':
                             index = int(adjustedSoftAction)
                             remainingcards = len(game.deck.cards)
                             deckremaining = round(remainingcards/52)
                             truecount = int(round(game.count/deckremaining))
-                            if truecount >= index:
-                                softAction = 'D'
+                            self.numOfAdjustedHands += 1
+                            if adjustedSoftSign == '+':
+                                if truecount >= index:
+                                    softAction = 'D' # come back here if we need to readjust for hit, then we'll make a action file
+                            elif adjustedSoftSign == '-':
+                                if trueCount <= index:
+                                    softAction = 'D'
 
                         if softAction == 'H':
                             deck.move_cards(self.hands[self.currentPlayingHand], 1, game)
@@ -550,6 +573,13 @@ class Person(object):
                         adjustedHardAction = 'N'
                     except IndexError, e:
                         adjustedHardAction = 'N'
+                    try:
+                        adjustedHardSign = adjustedStrat.AdjustedHardSignMatrix[hardLabelLookup][dealercard]
+                    except KeyError, e:
+                        adjustedHardSign = 'N'
+                    except IndexError, e:
+                        adjustedHardSign = 'N'
+                    
 
                     if adjustedHardAction != 'N':
                         try:
@@ -561,18 +591,14 @@ class Person(object):
                         remainingcards = len(game.deck.cards)
                         deckremaining = round(remainingcards/52)
                         truecount = int(round(game.count/deckremaining))
-                        if adjustedHardAction == '0+':
-                            if truecount >= 0:
-                                hardAction = adjustedHardActionAction
-                        elif adjustedHardAction == '0-':
-                            if truecount <= 0:
-                                hardAction = adjustedHardActionAction
-                        elif adjustedHardAction == '-1':
-                            if truecount <= -1:
-                                hardAction = adjustedHardActionAction
-                        else:
-                            index = int(adjustedHardAction)
+
+                        index = int(adjustedHardAction)
+                        self.numOfAdjustedHands += 1
+                        if adjustedHardSign == '+':
                             if truecount >= index:
+                                hardAction = adjustedHardActionAction
+                        elif adjustedHardSign == '-':
+                            if truecount <= index:
                                 hardAction = adjustedHardActionAction
 
                     #print 'Hard Action: ' + hardAction
@@ -790,6 +816,7 @@ class BlackJackGame(object):
                                                       ((self.players[i].tie / self.players[i].numOfHands) * 100) +
                                                       ((self.players[i].lose / self.players[i].numOfHands) * 100))
             print "Player final money %d" % self.players[i].money.amount
+            print "Player adjusted hands: %3.3f percent" % ((self.players[i].numOfAdjustedHands / self.players[i].numOfHands) * 100)
             print "================================================"
 
     def endRound(self):
@@ -821,7 +848,7 @@ class BlackJackGame(object):
                 player.money.initialBet(player.bets[-1])
         elif truecount > 0:
             for player in players:
-                player.bets.append(Bet(10 + (5 * truecount)))
+                player.bets.append(Bet(10 + (10 * truecount)))
                 player.money.initialBet(player.bets[-1])
 
     def initHands(self, players, dealer, deck, game):
@@ -923,21 +950,34 @@ class AdjustedStrategy(object):
         softFile = open('adjustedsoft')
         splitFile = open('adjustedsplit')
         hardActionFile = open('adjustedhardaction')
+        hardSignFile = open('adjustedhardsign')
+        softSignFile = open('adjustedsoftsign')
+        splitSignFile = open('adjustedsplitsign')
 
         self.AdjustedHardMatrix = dict()
         self.AdjustedSoftMatrix = dict()
         self.AdjustedSplitMatrix = dict()
         self.AdjustedHardActionMatrix = dict()
+        self.AdjustedHardSignMatrix = dict()
+        self.AdjustedSoftSignMatrix = dict()
+        self.AdjustedSplitSignMatrix = dict()
+        
 
         populateMatrix(self.AdjustedHardMatrix, hardFile)
         populateMatrix(self.AdjustedSoftMatrix, softFile)
         populateMatrix(self.AdjustedSplitMatrix, splitFile)
         populateMatrix(self.AdjustedHardActionMatrix, hardActionFile)
+        populateMatrix(self.AdjustedHardSignMatrix, hardSignFile)
+        populateMatrix(self.AdjustedSoftSignMatrix, softSignFile)
+        populateMatrix(self.AdjustedSplitSignMatrix, splitSignFile)
 
         hardFile.close()
         softFile.close()
         splitFile.close()
         hardActionFile.close()
+        hardSignFile.close()
+        softSignFile.close()
+        splitSignFile.close()
 
 def main(argv):
     dollar = ''
