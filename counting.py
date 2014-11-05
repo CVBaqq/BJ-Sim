@@ -985,7 +985,7 @@ def main(argv):
     players = ''
     cycles = ''
     try:
-        opts, args = getopt.getopt(argv, "hd:r:p:t:", ["dollar=", "rounds=", "players=", "cycles="])
+        opts, args = getopt.getopt(argv, "hd:r:p:c:", ["dollar=", "rounds=", "players=", "cycles="])
     except getopt.GetoptError:
         print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players> -c <number of cycles to run>'
         sys.exit(2)
