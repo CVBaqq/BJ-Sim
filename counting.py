@@ -714,8 +714,8 @@ class BlackJackGame(object):
                         else:
                             player.hands[0].discarded = True
                             player.lose += 1
-                        print player
-                    print self.dealer
+                        #print player
+                    #print self.dealer
                     self.endRound()
                     continue
                 else:
@@ -724,8 +724,8 @@ class BlackJackGame(object):
                             player.money.add(player.bets[0].get_amount() * 2.5)
                             player.win += 1
                             player.hands[0].discarded = True
-                            print player
-                            print self.dealer
+                            #print player
+                            #print self.dealer
                     if self.isAnyPlayersStillPlaying() == False:
                         self.endRound()
                         continue
@@ -738,7 +738,7 @@ class BlackJackGame(object):
                                      self.BasicStrategy,
                                      self.AdjustedStrategy,
                                      self)
-                    print player
+                    #print player
 
                 # Stop playing if all hands of player has busted
                 hasallplayersnotbusted = False
@@ -748,7 +748,7 @@ class BlackJackGame(object):
                             hasallplayersnotbusted = True
                 if hasallplayersnotbusted == False:
                     determineWinners(self.players, self.dealer)
-                    print self.dealer
+                    #print self.dealer
                     for i in range(len(self.players)):
                         print "Player %d money %d" % (i, self.players[i].money.amount)
                     self.endRound()
@@ -761,7 +761,7 @@ class BlackJackGame(object):
                                  self.BasicStrategy,
                                  self.AdjustedStrategy,
                                  self)
-                print self.dealer
+                #print self.dealer
 
                 #=============== Determine which hand won ===========================
                 determineWinners(self.players, self.dealer)
