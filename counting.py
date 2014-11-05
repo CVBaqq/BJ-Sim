@@ -848,7 +848,7 @@ class BlackJackGame(object):
                 player.money.initialBet(player.bets[-1])
         elif truecount > 0:
             for player in players:
-                player.bets.append(Bet(10 + (10 * truecount)))
+                player.bets.append(Bet(10 + (5 * truecount)))
                 player.money.initialBet(player.bets[-1])
 
     def initHands(self, players, dealer, deck, game):
@@ -983,10 +983,11 @@ def main(argv):
     dollar = ''
     rounds = ''
     players = ''
+    times = ''
     try:
-        opts, args = getopt.getopt(argv, "hd:r:p:", ["dollar=", "rounds=", "players="])
+        opts, args = getopt.getopt(argv, "hd:r:p:t:", ["dollar=", "rounds=", "players=", "times="])
     except getopt.GetoptError:
-        print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players>'
+        print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players> -t <number of times to run>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
@@ -998,9 +999,20 @@ def main(argv):
             rounds = arg
         elif opt in ("-p", "--players"):
             players = arg
+        elif opt in ("-t", "--times"):
+            times = arg
+    averageEarningRange = 0
+    totalEarningRange = 0
+    for i in range(int(times)):
+        print "Play Cycle %d" % i
+        game = BlackJackGame(int(rounds), int(dollar), int(players))
+        game.play()
+        for player in game.players:
+            totalEarningRange += player.money.highestamount - player.money.lowestamount
+    averageEarningRange = totalEarningRange / (int(players) * int(times))
 
-    game = BlackJackGame(int(rounds), int(dollar), int(players))
-    game.play()
+    print "Average Earning Range: %d" % averageEarningRange
+        
 
 if __name__ == "__main__":
     main(sys.argv[1:])
