@@ -983,15 +983,15 @@ def main(argv):
     dollar = ''
     rounds = ''
     players = ''
-    times = ''
+    cycles = ''
     try:
-        opts, args = getopt.getopt(argv, "hd:r:p:t:", ["dollar=", "rounds=", "players=", "times="])
+        opts, args = getopt.getopt(argv, "hd:r:p:t:", ["dollar=", "rounds=", "players=", "cycles="])
     except getopt.GetoptError:
-        print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players> -t <number of times to run>'
+        print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players> -c <number of cycles to run>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players>'
+            print 'counting.py -d <starting dollars> -r <number of rounds> -p <number of players> -c <number of cycles to run>'
             sys.exit()
         elif opt in ("-d", "--dollar"):
             dollar = arg
@@ -999,17 +999,17 @@ def main(argv):
             rounds = arg
         elif opt in ("-p", "--players"):
             players = arg
-        elif opt in ("-t", "--times"):
-            times = arg
+        elif opt in ("-c", "--cycles"):
+            cycles = arg
     averageEarningRange = 0
     totalEarningRange = 0
-    for i in range(int(times)):
+    for i in range(int(cycles)):
         print "Play Cycle %d" % i
         game = BlackJackGame(int(rounds), int(dollar), int(players))
         game.play()
         for player in game.players:
             totalEarningRange += player.money.highestamount - player.money.lowestamount
-    averageEarningRange = totalEarningRange / (int(players) * int(times))
+    averageEarningRange = totalEarningRange / (int(players) * int(cycles))
 
     print "Average Earning Range: %d" % averageEarningRange
         
