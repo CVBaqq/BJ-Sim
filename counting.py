@@ -1001,18 +1001,44 @@ def main(argv):
             players = arg
         elif opt in ("-c", "--cycles"):
             cycles = arg
+    lowestEarning = 0
+    highestEarning = 0
+    firstcount = True
+    averageLowestEarning = 0
+    totalLowestEarning = 0
+    averageHighestEarning = 0
+    totalHighestEarning = 0
     averageEarningRange = 0
     totalEarningRange = 0
+    averageEndingAmount = 0
+    totalAverageEndingAmount = 0
     for i in range(int(cycles)):
         print "Play Cycle %d" % i
         game = BlackJackGame(int(rounds), int(dollar), int(players))
         game.play()
         for player in game.players:
             totalEarningRange += player.money.highestamount - player.money.lowestamount
+            totalLowestEarning += player.money.lowestamount
+            totalHighestEarning += player.money.highestamount
+            totalAverageEndingAmount += player.money.amount
+            if firstcount:
+                firstcount = False
+                lowestEarning = player.money.lowestamount
+                highestEarning = player.money.highestamount
+            if player.money.lowestamount < lowestEarning:
+                lowestEarning = player.money.lowestamount
+            if player.money.highestamount > highestEarning:
+                highestEarning = player.money.highestamount
     averageEarningRange = totalEarningRange / (int(players) * int(cycles))
-
+    averageLowestEarning = totalLowestEarning / (int(players) * int(cycles))
+    averageHighestEarning = totalHighestEarning / (int(players) * int(cycles))
+    averageEndingAmount = totalAverageEndingAmount / (int(players) * int(cycles))
+    print "Average Lowest Earning: %d" % averageLowestEarning
+    print "Average Highest Earning: %d" % averageHighestEarning
     print "Average Earning Range: %d" % averageEarningRange
-        
+    print "Lowest Amount: %d" % lowestEarning
+    print "Highest Amount: %d" % highestEarning
+    print "Average Ending Amount: %d" % averageEndingAmount
 
 if __name__ == "__main__":
     main(sys.argv[1:])
